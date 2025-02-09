@@ -1,0 +1,409 @@
+//String color functionality for greyscript
+//By MachaCeleste 20240205
+string.color = function(hexc)
+    return "<color=" + hexc + ">" + self + "</color>"
+end function
+//LinQ lib functionality for greyscript
+//By MachaCeleste 20240205
+list.first = function(key, value)
+    for each in self
+    if typeof(each) == "string" then
+        if key == "is" and each == value then return each
+        if key == "contains" and each.is_match(value) then return each
+    else if typeof(each) == "file" then
+        if key == "name" and each.name == value then return each
+        if key == "path" and each.path == value then return each
+        if key == "permissions" and each.permissions == value then return each
+        if key == "has_permission" then
+            v = value.values
+            c = ""
+            for p in v
+                if each.has_permission(p) then c = c + p
+            end for
+            if c == value then return each
+        end if
+        if key == "size" and each.size == value then return each
+    else if typeof(each) == "port" then
+        if key == "port_number" and each.port_number == value then return each
+        if key == "is_closed" and each.is_closed == value then return each
+        if key == "get_lan_ip" and each.get_lan_ip == value then return each
+    else if typeof(each) == "map" then
+        if each[key] == value then return each
+    end if
+    end for
+end function
+list.where = function(key, value)
+    ret = []
+    for each in self
+        if typeof(each) == "string" then
+            if key == "is" and each == value then ret.push(each)
+            if key == "contains" and each.is_match(value) then ret.push(each)
+        else if typeof(each) == "file" then
+            if key == "name" and each.name == value then ret.push(each)
+            if key == "path" and each.path == value then ret.push(each)
+            if key == "permissions" and each.permissions == value then ret.push(each)
+            if key == "has_permission" then
+                v = value.values
+                c = ""
+                for p in v
+                    if each.has_permission(p) then c = c + p
+                end for
+                if c == value then ret.push(each)
+            end if
+            if key == "size" and each.size == value then ret.push(each)
+        else if typeof(each) == "port" then
+            if key == "port_number" and each.port_number == value then ret.push(each)
+            if key == "is_closed" and each.is_closed == value then ret.push(each)
+            if key == "get_lan_ip" and each.get_lan_ip == value then ret.push(each)
+        else if typeof(each) == "map" then
+            if each[key] == value then ret.push(each)
+        end if
+    end for
+    return ret
+end function
+list.wherenot = function(key, value)
+    ret = []
+    for each in self
+        if typeof(each) == "string" then
+            if key == "is" and each != value then ret.push(each)
+            if key == "contains" and not each.is_match(value) then ret.push(each)
+        else if typeof(each) == "file" then
+            if key == "name" and each.name != value then ret.push(each)
+            if key == "path" and each.path != value then ret.push(each)
+            if key == "permissions" and each.permissions != value then ret.push(each)
+            if key == "has_permission" then
+                v = value.values
+                c = ""
+                for p in v
+                    if each.has_permission(p) then c = c + p
+                end for
+                if c != value then ret.push(each)
+            end if
+            if key == "size" and each.size != value then ret.push(each)
+        else if typeof(each) == "port" then
+            if key == "port_number" and each.port_number != value then ret.push(each)
+            if key == "is_closed" and each.is_closed != value then ret.push(each)
+            if key == "get_lan_ip" and each.get_lan_ip != value then ret.push(each)
+        else if typeof(each) == "map" then
+            if each[key] != value then ret.push(each)
+        end if
+    end for
+    return ret
+    end function
+    regex_escape = function(text)
+    result = text
+
+    for x in "+*?^$.[]{}()|/"
+        result = result.replace("\"+x, "\"+x)
+    end for
+
+    return result
+end function
+//Probe lib functionality for greyscript
+//By MachaCeleste 20240205
+Probe = {}
+    Probe.toRoot = function(f)
+        while parent(f)
+            f=parent(f)
+        end while
+        return f
+    end function
+    Probe.run = function(object)
+        file = null
+        if typeof(object) == "shell" then file = File(host_computer(object), "/")
+        if typeof(object) == "computer" then file = File(object, "/")
+        if typeof(object) == "file" then file = self.toRoot(object)
+        root = file.get_folders.first("path", "/root")
+        if root and root.has_permission("r") and root.has_permission("w") and root.has_permission("x") then return "root"
+        home = file.get_folders.first("path", "/home")
+        if home then
+            users = home.get_folders.wherenot("path", "/home/guest")
+            if users then
+                for each in users
+                    if each.has_permission("r") and each.has_permission("w") and each.has_permission("x") then return "user"
+                end for
+            end if
+        end if
+        return "guest"
+    end function
+//Drop lib functionality for greyscript
+//By MachaCeleste 20240305
+Drop = {}
+    Drop.fMap = null
+    Drop.allFolders = function(folder)
+        self.fMap.push(folder)
+        for f in folder.get_folders
+            self.allFolders(f)
+        end for
+    end function
+    Drop.run = function(folder)
+        self.fMap = []
+        self.allFolders(folder)
+        for f in self.fMap
+            if f.has_permission("w") and f.has_permission("x") then return f
+        end for
+        return "Couldn't find a sutable drop point!"
+    end function
+Object = {}
+    Object.res = null
+    Object.level = ""
+    Object.mem = ""
+    Object.target = ""
+Library = {}
+    Library.lib = null
+    Library.fileName = ""
+net_session = null
+getUsrInfo = function(userfolders)
+    out = "Account:Password\n"
+    for userfolder in userfolders.wherenot("name", "guest")
+        config = userfolder.get_folders.first("name", "Config")
+        mail = config.get_files.first("name", "Mail.txt")
+        if mail then out = out + mail.get_content + char(10)
+        bank = config.get_files.first("name", "Bank.txt")
+        if bank then out = out + bank.get_content + char(10)
+    end for
+    if out == "Account:Password\n" then return null
+    return out
+end function
+
+getTypeOf = function(dev)
+    r=get_router(dev)
+    s=get_switch(dev)
+    if r and not s then return "router"
+    if r and s then return "switch"
+    return "device"
+end function
+
+routerscan = function(address)
+    type = getTypeOf(address)
+    if type == "device" then return "This is a device!"
+    router = null
+    if type == "switch" then router = get_switch(address)
+    if type == "router" then router = get_router(address)
+    info = "No Firewall found!"
+    rules = router.firewall_rules
+    print("Kernel v" + router.kernel_version)
+    if rules.len > 0 then
+        info = "ACTION PORT SOURCE DESTINATION"
+        for rule in rules
+            info = info + "\n" + rule
+        end for
+        info = format_columns(info)
+    end if
+    print("\n" + type + " : " + router.bssid_name + " - " + router.essid_name)
+    print(info)
+    return true
+end function
+
+scanFunc = function(metaLib)
+    listMem = metaxploit.scan(metaLib)
+    if listMem.len == 0 then return "Error: There are no exploits!".color("red")
+    objL = []
+    for mem in listMem
+        scans = metaxploit.scan_address(metaLib, mem).split("Unsafe check: ")
+        for data in scans
+            if scans.indexOf(data) == 0 then continue
+            m = data.matches("<b>\S*<\/b>\.")
+            target = m.values.pull[3:m.len-6]
+            res = metaLib.overflow(mem, target)
+            if not res then
+                i = user_input("Password(p) or Bounce(b)? ").trim
+                if i == "p" then res = metaLib.overflow(mem, target, user_input("New password: ").trim)
+                if i == "b" then res = metaLib.overflow(mem, target, user_input("Enter a lanIP for bounce: ").trim)
+            end if
+            if typeof(res) == "number" then
+                print(mem + " " + target)
+                continue
+            end if
+            if not res then continue
+            obj = new Object
+            obj.res = res
+            obj.level = Probe.run(res)
+            obj.mem = mem
+            obj.target = target
+            objL.push(obj)
+        end for
+    end for
+    return objL
+end function
+
+attackFunc = function(metaLib)
+    mem = user_input("Memory Address: ").trim
+    target = user_input("Target String: ").trim
+    third = user_input("Third param if needed: ").trim
+    res = metaLib.overflow(mem, target, third)
+    if typeof(res) == "number" then return "Exploit performed".color("green")
+    if not res then return "Error: res was null".color("red")
+    obj = new Object
+    obj.res = res
+    obj.level = Probe.run(res)
+    obj.mem = mem
+    obj.target = target
+    return [obj]
+end function
+
+//Porthack functionality for greyscript
+//By MachaCeleste 20240513
+if params.len < 1 or params[0] == "-h" or params[0] == "-help" then exit("Usage: <b>porthack [ip_address] [port]</b>\nUsage: <b>porthack -l</b>\nUsage: <b>porthack nmap [ip_address]</b>")
+if params[0] == "nmap" then
+    if not is_valid_ip(params[1]) then exit("Error: invalid ip address".color("red"))
+    if not get_shell.host_computer.is_network_active then exit("Error: No internet access.".color("red"))
+
+    ipAddress = params[1]
+    isLanIp = is_lan_ip( ipAddress )
+
+    if isLanIp then
+    router = get_router;
+    else 
+    router = get_router( ipAddress )
+    end if
+
+    if router == null then exit("Error: IP address not found!".color("red"))
+    ports = null
+
+    if not isLanIp then
+    ports = router.used_ports
+    else
+    ports = router.device_ports(ipAddress)
+    end if
+
+    if ports == null then exit("Error: Ports returned null!".color("red"))
+    if typeof(ports) == "string" then exit(ports)
+
+    out = routerscan(ipAddress)
+    if typeof(out) == "string" then print(out)
+
+    info = "PORT STATE SERVICE VERSION LAN"
+    print("\nInteresting ports on " + params[1] + "\n")
+    if(ports.len == 0) then exit("Scan finished. No open ports.".color("red"))
+
+    for port in ports
+    service_info = router.port_info(port)
+    lan_ips = port.get_lan_ip
+    port_status = "open"
+
+    if(port.is_closed and not isLanIp) then
+        port_status = "closed"
+    end if
+    info = info + "\n" + port.port_number + " " + port_status + " " + service_info + " " + lan_ips
+    end for
+    exit(format_columns(info) + "\n")
+end if
+hs = get_shell
+hc = host_computer(hs)
+mXf = hc.File("/lib/metaxploit.so")
+toolf = hc.File(program_path)
+if not mXf then mXf = hc.File(current_path + "/metaxploit.so")
+if not mXf then exit("Error: Can't find metaxploit library in the /lib path or the current folder!".color("red"))
+metaxploit = include_lib(mXf.path)
+
+metaLib = null
+if params[0] != "-l" then
+    address = params[0]
+    if not is_valid_ip(address) then exit("Error: That's not a valid IP!".color("red"))
+    port = params[1].to_int
+    net_session = metaxploit.net_use(address, port)
+    if not net_session then exit("Error: Couldn't establish net session!".color("red"))
+    metaLib = net_session.dump_lib
+    if not metaLib then exit("Error: Couldn't dump library!".color("red"))
+else
+    libL = []
+    for libf in hc.File("/lib").get_files
+        metaLib = metaxploit.load(libf.path)
+        if not metaLib then continue
+        lib = new Library
+        lib.lib = metaLib
+        lib.fileName = libf.name
+        libL.push(lib)
+    end for
+    if libL.len == 0 then exit("Error: no local libraries found!".color("red"))
+    info = "SEL FILE LIB VER"
+    n = 0
+    for each in libL
+        info = info + "\n" + "[" + n + "] " + each.fileName + " " + each.lib.lib_name + " v" + each.lib.version
+        n = n + 1
+    end for
+    print(format_columns(info))
+    i = user_input("Select library (x/exit): ").to_int
+    if i == "exit" or i == "x" then exit
+    if i > libL.len - 1 or i < 0 or typeof(i) == "string" then exit(("Error: That is not a valid selection! " + i).color("red"))
+    metaLib = libL[i].lib
+end if
+print("Grabbed " + metaLib.lib_name + " v" + metaLib.version + "!")
+
+objL = []
+if user_input("Direct attack? y/n ") == "y" then
+    objL = attackFunc(metaLib)
+else
+    objL = scanFunc(metaLib)
+end if
+
+
+if typeof(objL) == "string" then exit(objL)
+print("\n<align=center>Celestial Tools" + char(169) + "</align>\n<align=center>Porthack</align>\n")
+if net_session then
+    a = "X"
+    if net_session.is_any_active_user then a = "Non-Root".color("yellow")
+    if net_session.is_root_active_user then a = "Root".color("red")
+    u = net_session.get_num_users
+    p = net_session.get_num_portforward
+    g = net_session.get_num_conn_gateway
+    print("Active:" + a + " Registered:" + u + " Ports:" + p + " Gateway:" + g)
+end if
+obj = null
+if objL.len > 1 then
+    print("Objects gained from " + metaLib.lib_name + " v" + metaLib.version + "...\n")
+    info = "SEL TYPE LEVEL MEM UNSEC"
+    n = 0
+    for each in objL
+        info = info + "\n" + "[" + n + "] " + typeof(each.res) + " " + each.level + " " + each.mem + " " + each.target
+        n = n + 1
+    end for
+    info = format_columns(info)
+    info = info.replace("shell", "shell".color("red")).replace("computer", "computer".color("yellow")).replace("file", "file".color("green"))
+    info = info.replace("root", "root".color("red")).replace("user", "user".color("yellow")).replace("guest", "guest".color("green"))
+    print(info)
+    i = user_input("Select object (x/exit): ").to_int
+    if i == "exit" or i == "x" then exit
+    if i > objL.len - 1 or i < 0 or typeof(i) == "string" then exit(("Error: That is not a valid selection! " + i).color("red"))
+    obj = objL[i]
+else
+    obj = objL[0]
+end if
+
+if typeof(obj.res) == "shell" then
+    drop = Drop.run(File(host_computer(obj.res), "/"))
+    out = hs.scp(mXf.path, drop.path, obj.res)
+    if typeof(out) == "string" then print("Error: Couldn't move up metaxploit!".color("red"))
+    out = hs.scp(toolf.path, drop.path, obj.res)
+    if typeof(out) == "string" then print("Error: Couldn't move up porthack!".color("red"))
+    obj.res.start_terminal
+    return
+
+else if typeof(obj.res) == "computer" then
+    file = obj.res.File("/etc/passwd")
+    if not file then exit("File returned null!".color("red"))
+    if file.has_permission("r") then print("passwd:\n" + file.get_content)
+    file = obj.res.File("/home/")
+    userfolders = file.get_folders
+    if not userfolders.len > 1 then exit("Error: no users found!".color("red"))
+    out = getUsrInfo(userfolders)
+    if not out then exit("Error: no user data found!".color("red"))
+    print("User Accounts:\n" + format_columns(out))
+    return
+
+else if typeof(obj.res) == "file" then
+    file = Probe.toRoot(obj.res).get_folders.first("name", "etc").get_files.first("name", "passwd")
+    if not file then exit("File returned null!".color("red"))
+    if file.has_permission("r") then print("passwd:\n" + file.get_content)
+    file = Probe.toRoot(obj.res).get_folders.first("name", "home")
+    userfolders = file.get_folders
+    if not userfolders.len > 1 then exit("Error: no users found!".color("red"))
+    out = getUsrInfo(userfolders)
+    if not out then exit("Error: no user data found!".color("red"))
+    print("User Accounts:\n" + format_columns(out))
+    return
+
+else
+    print("Error: ret = null".color("red"))
+end if

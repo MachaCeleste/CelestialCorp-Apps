@@ -1,0 +1,159 @@
+metaxploit = include_lib("/lib/metaxploit.so")
+if not metaxploit then metaxploit = include_lib(current_path + "/metaxploit.so")
+if not metaxploit then exit("Error: Can't find metaxploit library in the /lib path or the current folder")
+
+print("\n<align=center>Celestial Tools" + char(169) + "</align>\n<align=center>Template</align>\n")
+
+mem = user_input("put memory address here: ")
+unsecstr = user_input("put unsecured string here: ")
+
+//LinQ lib functionality for greyscript
+//By MachaCeleste 20240205
+list.first = function(key, value)
+    for each in self
+    if typeof(each) == "string" then
+        if key == "is" and each == value then return each
+        if key == "contains" and each.is_match(value) then return each
+    else if typeof(each) == "file" then
+        if key == "name" and each.name == value then return each
+        if key == "path" and each.path == value then return each
+        if key == "permissions" and each.permissions == value then return each
+        if key == "has_permission" then
+            v = value.values
+            c = ""
+            for p in v
+                if each.has_permission(p) then c = c + p
+            end for
+            if c == value then return each
+        end if
+        if key == "size" and each.size == value then return each
+    else if typeof(each) == "port" then
+        if key == "port_number" and each.port_number == value then return each
+        if key == "is_closed" and each.is_closed == value then return each
+        if key == "get_lan_ip" and each.get_lan_ip == value then return each
+    else if typeof(each) == "map" then
+        if each[key] == value then return each
+    end if
+    end for
+end function
+list.where = function(key, value)//return a list of objects in a list with the key matching a value or null
+    ret = []
+    for each in self
+        if typeof(each) == "string" then
+            if key == "is" and each == value then ret.push(each)
+            if key == "contains" and each.is_match(value) then ret.push(each)
+        else if typeof(each) == "file" then
+            if key == "name" and each.name == value then ret.push(each)
+            if key == "path" and each.path == value then ret.push(each)
+            if key == "permissions" and each.permissions == value then ret.push(each)
+            if key == "has_permission" then
+                v = value.values
+                c = ""
+                for p in v
+                    if each.has_permission(p) then c = c + p
+                end for
+                if c == value then ret.push(each)
+            end if
+            if key == "size" and each.size == value then ret.push(each)
+        else if typeof(each) == "port" then
+            if key == "port_number" and each.port_number == value then ret.push(each)
+            if key == "is_closed" and each.is_closed == value then ret.push(each)
+            if key == "get_lan_ip" and each.get_lan_ip == value then ret.push(each)
+        else if typeof(each) == "map" then
+            if each[key] == value then ret.push(each)
+        end if
+    end for
+    return ret
+end function
+list.wherenot = function(key, value)//return a list of objects in a list with the key NOT matching a value or null
+    ret = []
+    for each in self
+        if typeof(each) == "string" then
+            if key == "is" and each != value then ret.push(each)
+            if key == "contains" and not each.is_match(value) then ret.push(each)
+        else if typeof(each) == "file" then
+            if key == "name" and each.name != value then ret.push(each)
+            if key == "path" and each.path != value then ret.push(each)
+            if key == "permissions" and each.permissions != value then ret.push(each)
+            if key == "has_permission" then
+                v = value.values
+                c = ""
+                for p in v
+                    if each.has_permission(p) then c = c + p
+                end for
+                if c != value then ret.push(each)
+            end if
+            if key == "size" and each.size != value then ret.push(each)
+        else if typeof(each) == "port" then
+            if key == "port_number" and each.port_number != value then ret.push(each)
+            if key == "is_closed" and each.is_closed != value then ret.push(each)
+            if key == "get_lan_ip" and each.get_lan_ip != value then ret.push(each)
+        else if typeof(each) == "map" then
+            if each[key] != value then ret.push(each)
+        end if
+    end for
+    return ret
+end function
+
+toRoot = function(f)
+    while parent(f)
+        f=parent(f)
+    end while
+    return f
+end function
+
+if params.len != 2 or params[0] == "-h" or params[0] == "--help" then exit("<b>Usage: "+program_path.split("/")[-1]+" [ip_address] [port]</b>")
+address = params[0]
+port = params[1].to_int
+net_session = metaxploit.net_use(address, port)
+if not net_session then exit("Error: Couldn't establish net session")
+metaLib = net_session.dump_lib
+print("Grabbed " + metaLib.lib_name + " v" + metaLib.version)
+res = metaLib.overflow(mem, unsecstr)
+if typeof(res) == "number" then exit("Firewall disabled!")
+if not res then res = metaLib.overflow(mem, unsecstr, "password")
+if typeof(res) == "number" then exit("Password changed to ""password"" for above user!")
+if not res then res = metaLib.overflow(mem, unsecstr, user_input("Enter target LanIp: "))
+if not res then exit("Error: res returned null")
+print("Gained " + typeof(res))
+
+getUsrInfo = function(userfolders)
+out = "Account:Password\n"
+for userfolder in userfolders.wherenot("name", "guest")
+    config = userfolder.get_folders.first("name", "Config")
+    mail = config.get_files.first("name", "Mail.txt")
+    if mail then out = out + mail.get_content + char(10)
+    bank = config.get_files.first("name", "Bank.txt")
+    if bank then out = out + bank.get_content + char(10)
+end for
+if out == "Account:Password\n" then return null
+return out
+end function
+
+if typeof(res) == "shell" then
+    res.start_terminal
+    return
+
+else if typeof(res) == "computer" then
+    file = res.File("/etc/passwd")
+    if file then print("passwd:\n" + file.get_content)
+    file = res.File("/home/")
+    userfolders = file.get_folders
+    if not userfolders.len > 1 then exit("Error: no users found!")
+    out = getUsrInfo(userfolders)
+    if not out then exit("Error: no user data found!")
+    print("User Accounts:\n" + format_columns(out))
+    return
+else if typeof(res) == "file" then
+    file = toRoot(res).get_folders.first("name", "etc").get_files.first("name", "passwd")
+    if file.has_permission("r") then print("passwd:\n" + file.get_content)
+    file = toRoot(res).get_folders.first("name", "home")
+    userfolders = file.get_folders
+    if not userfolders.len > 1 then exit("Error: no users found!")
+    out = getUsrInfo(userfolders)
+    if not out then exit("Error: no user data found!")
+    print("User Accounts:\n" + format_columns(out))
+    return
+else
+    print("Error: ret = null")
+end if

@@ -1,0 +1,7 @@
+metaxploit = include_lib("/lib/metaxploit.so")
+if not metaxploit then metaxploit = include_lib(current_path + "/metaxploit.so")
+if not metaxploit then exit("Error: Missing metaxploit library")
+for libFile in get_shell.host_computer.File("/lib/").get_files
+    metaLib = metaxploit.load(libFile.path)
+    print(metaLib.lib_name + " v" + metaLib.version)
+end for

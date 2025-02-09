@@ -1,0 +1,266 @@
+//LinQ lib functionality for greyscript
+//By MachaCeleste 20240205
+map.first = function(key, value)
+    for each in self.indexes
+        if self[each][key] == value then return self[each]
+    end for
+end function
+map.where = function(key, value)
+    ret = {}
+    for each in self.indexes
+        if self[each][key] == value then ret.push(self[each])
+    end for
+    return ret
+end function
+map.wherenot = function(key, value)
+    ret = {}
+    for each in self.indexes
+        if self[each][key] != value then ret.push(self[each])
+    end for
+    return ret
+end function
+list.first = function(key, value)
+    for each in self
+    if typeof(each) == "string" then
+        if key == "is" and each == value then return each
+        if key == "contains" and each.is_match(value) then return each
+    else if typeof(each) == "file" then
+        if key == "name" and each.name == value then return each
+        if key == "path" and each.path == value then return each
+        if key == "permissions" and each.permissions == value then return each
+        if key == "has_permission" then
+            v = value.values
+            c = ""
+            for p in v
+                if each.has_permission(p) then c = c + p
+            end for
+            if c == value then return each
+        end if
+        if key == "size" and each.size == value then return each
+    else if typeof(each) == "port" then
+        if key == "port_number" and each.port_number == value then return each
+        if key == "is_closed" and each.is_closed == value then return each
+        if key == "get_lan_ip" and each.get_lan_ip == value then return each
+    else if typeof(each) == "map" then
+        if each[key] == value then return each
+    end if
+    end for
+end function
+list.where = function(key, value)
+    ret = []
+    for each in self
+        if typeof(each) == "string" then
+            if key == "is" and each == value then ret.push(each)
+            if key == "contains" and each.is_match(value) then ret.push(each)
+        else if typeof(each) == "file" then
+            if key == "name" and each.name == value then ret.push(each)
+            if key == "path" and each.path == value then ret.push(each)
+            if key == "permissions" and each.permissions == value then ret.push(each)
+            if key == "has_permission" then
+                v = value.values
+                c = ""
+                for p in v
+                    if each.has_permission(p) then c = c + p
+                end for
+                if c == value then ret.push(each)
+            end if
+            if key == "size" and each.size == value then ret.push(each)
+        else if typeof(each) == "port" then
+            if key == "port_number" and each.port_number == value then ret.push(each)
+            if key == "is_closed" and each.is_closed == value then ret.push(each)
+            if key == "get_lan_ip" and each.get_lan_ip == value then ret.push(each)
+        else if typeof(each) == "map" then
+            if each[key] == value then ret.push(each)
+        end if
+    end for
+    return ret
+end function
+list.wherenot = function(key, value)
+    ret = []
+    for each in self
+        if typeof(each) == "string" then
+            if key == "is" and each != value then ret.push(each)
+            if key == "contains" and not each.is_match(value) then ret.push(each)
+        else if typeof(each) == "file" then
+            if key == "name" and each.name != value then ret.push(each)
+            if key == "path" and each.path != value then ret.push(each)
+            if key == "permissions" and each.permissions != value then ret.push(each)
+            if key == "has_permission" then
+                v = value.values
+                c = ""
+                for p in v
+                    if each.has_permission(p) then c = c + p
+                end for
+                if c != value then ret.push(each)
+            end if
+            if key == "size" and each.size != value then ret.push(each)
+        else if typeof(each) == "port" then
+            if key == "port_number" and each.port_number != value then ret.push(each)
+            if key == "is_closed" and each.is_closed != value then ret.push(each)
+            if key == "get_lan_ip" and each.get_lan_ip != value then ret.push(each)
+        else if typeof(each) == "map" then
+            if each[key] != value then ret.push(each)
+        end if
+    end for
+    return ret
+    end function
+    regex_escape = function(text)
+    result = text
+
+    for x in "+*?^$.[]{}()|/"
+        result = result.replace("\"+x, "\"+x)
+    end for
+
+    return result
+end function
+//Probe lib functionality for greyscript
+//By MachaCeleste 20240205
+Probe = {}
+    Probe.toRoot = function(f)
+        while parent(f)
+            f=parent(f)
+        end while
+        return f
+    end function
+    Probe.run = function(object)
+        file = null
+        if typeof(object) == "shell" then file = File(host_computer(object), "/")
+        if typeof(object) == "computer" then file = File(object, "/")
+        if typeof(object) == "file" then file = self.toRoot(object)
+        root = file.get_folders.first("path", "/root")
+        if root and root.has_permission("r") and root.has_permission("w") and root.has_permission("x") then return "root"
+        home = file.get_folders.first("path", "/home")
+        if home then
+            users = home.get_folders.wherenot("path", "/home/guest")
+            if users then
+                for each in users
+                    if each.has_permission("r") and each.has_permission("w") and each.has_permission("x") then return "user"
+                end for
+            end if
+        end if
+        return "guest"
+    end function
+//Drop lib functionality for greyscript
+//By MachaCeleste 20240305
+Drop = {}
+    Drop.fMap = null
+    Drop.allFolders = function(folder)
+        self.fMap.push(folder)
+        for f in folder.get_folders
+            self.allFolders(f)
+        end for
+    end function
+    Drop.run = function(folder)
+        self.fMap = []
+        self.allFolders(folder)
+        for f in self.fMap
+            if f.has_permission("w") and f.has_permission("x") then return f
+        end for
+        return "Couldn't find a sutable drop point!"
+    end function
+Object = {}
+    Object.res = null
+    Object.level = ""
+    Object.mem = ""
+    Object.target = ""
+if params.len != 2 or params[0] == "-h" or params[0] == "--help" then exit("Usage: <b>shellall [ip_address] [port]</b>\nUsage: <b>shellall nmap [ip_address]</b>")
+if params[0] == "nmap" then
+    if not is_valid_ip(params[1]) then exit("nmap: invalid ip address")
+    if not get_shell.host_computer.is_network_active then exit("nmap: No internet access.")
+
+    ipAddress = params[1]
+    isLanIp = is_lan_ip( ipAddress )
+
+    if isLanIp then
+    router = get_router;
+    else 
+    router = get_router( ipAddress )
+    end if
+
+    if router == null then exit("Error: IP address not found!")
+    ports = null
+
+    if not isLanIp then
+    ports = router.used_ports
+    else
+    ports = router.device_ports(ipAddress)
+    end if
+
+    if ports == null then exit("Error: Ports returned null!")
+    if typeof(ports) == "string" then exit(ports)
+        
+    info = "PORT STATE SERVICE VERSION LAN"
+    print("Interesting ports on " + params[1] + "\n")
+    if(ports.len == 0) then exit("Scan finished. No open ports.")
+
+    for port in ports
+    service_info = router.port_info(port)
+    lan_ips = port.get_lan_ip
+    port_status = "open"
+
+    if(port.is_closed and not isLanIp) then
+        port_status = "closed"
+    end if
+    info = info + "\n" + port.port_number + " " + port_status + " " + service_info + " " + lan_ips
+    end for
+    exit(format_columns(info) + "\n")
+end if
+hs = get_shell
+hc = host_computer(hs)
+mXf = hc.File("/lib/metaxploit.so")
+toolf = hc.File(program_path)
+if not mXf then mXf = hc.File(current_path + "/metaxploit.so")
+if not mXf then exit("Error: Can't find metaxploit library in the /lib path or the current folder!")
+metaxploit = include_lib(mXf.path)
+address = params[0]
+port = params[1].to_int
+net_session = metaxploit.net_use(address, port)
+if not net_session then exit("Error: Couldn't establish net session!")
+metaLib = net_session.dump_lib
+if not metaLib then exit("Error: Couldn't dump library!")
+print("Grabbed " + metaLib.lib_name + " v" + metaLib.version + "! Scanning...")
+scanFunc = function
+	listMem = metaxploit.scan(metaLib)
+	if listMem.len == 0 then return print("There are no exploi- How! SAVE THIS LIBRARY NOW!")
+    o = []
+	for mem in listMem
+		scans = metaxploit.scan_address(metaLib, mem).split("Unsafe check: ")
+		for data in scans
+			if scans.indexOf(data) == 0 then continue
+			m = data.matches("<b>\S*<\/b>\.")
+			target = m.values.pull[3:m.len-6]
+			res = metaLib.overflow(mem, target)
+			if not res then continue
+			if typeof(res) == "shell" then
+                obj = new Object
+                obj.res = res
+                obj.level = Probe.run(res)
+                obj.mem = mem
+                obj.target = target
+                o.push(obj)
+            end if
+		end for
+	end for
+    return o
+end function
+objL = scanFunc
+if objL.len == 0 then exit("Error: nothing exploitable found!")
+print("\n<align=center>Celestial Tools" + char(169) + "</align>\n<align=center>Shell-All</align>\n")
+info = "SEL LEVEL MEM UNSEC"
+n = 0
+for each in objL
+    info = info + "\n" + "[" + n + "] " + each.level + " " + each.mem + " " + each.target
+    n = n + 1
+end for
+print(format_columns(info))
+i = user_input("Select shell (x/exit): ").to_int
+if i == "exit" or i == "x" then exit
+if i > objL.len - 1 or i < 0 or typeof(i) == "string" then exit("Error: That is not a valid selection! " + i)
+obj = objL[i]
+drop = Drop.run(File(host_computer(obj.res), "/"))
+out = hs.scp(mXf.path, drop.path, obj.res)
+if typeof(out) == "string" then print("Error: Couldn't move up metaxploit!")
+out = hs.scp(toolf.path, drop.path, obj.res)
+if typeof(out) == "string" then print("Error: Couldn't move up shellall!")
+res = obj.res
+res.start_terminal
