@@ -1,13 +1,5 @@
 chatd = include_lib("/lib/libchat.so")
-if not chatd then
-    chatd = include_lib(current_path + "/libchat.so")
-end if
-if not chatd then
-    get_shell.launch("/bin/apt-get", "update")
-    get_shell.launch("/bin/apt-get", "install libchat.so")
-    chatd = include_lib("/lib/libchat.so")
-end if
 if not chatd then exit("Error: Missing libchat.so library in the /lib path")
 output = chatd.install_service
 if output != true then exit(output)
-print("<b>Type 'Browser.exe " + get_router.local_ip + ":8080' to access the router configuration to make sure the service it's accessible</b>")
+print("Chat server installed!")
