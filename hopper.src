@@ -1,0 +1,251 @@
+//LinQ lib functionality for greyscript
+//By MachaCeleste 20240205
+list.first = function(key, value)
+    for each in self
+        if typeof(each) == "string" then
+            if key == "is" and each == value then return each
+            if key == "contains" and each.is_match(value) then return each
+        else if typeof(each) == "file" then
+            if key == "name" and each.name == value then return each
+            if key == "namehas" and each.name.is_match(value) then ret.push(each)
+            if key == "path" and each.path == value then return each
+            if key == "permissions" and each.permissions == value then return each
+            if key == "has_permission" then
+                v = value.values
+                c = ""
+                for p in v
+                    if each.has_permission(p) then c = c + p
+                end for
+                if c == value then return each
+            end if
+            if key == "size" and each.size == value then return each
+        else if typeof(each) == "port" then
+            if key == "port_number" and each.port_number == value then return each
+            if key == "is_closed" and each.is_closed == value then return each
+            if key == "get_lan_ip" and each.get_lan_ip == value then return each
+        else if typeof(each) == "map" then
+            if each[key] == value then return each
+        end if
+    end for
+    return null
+end function
+list.where = function(key, value)
+    ret = []
+    for each in self
+        if typeof(each) == "string" then
+            if key == "is" and each == value then ret.push(each)
+            if key == "contains" and each.is_match(value) then ret.push(each)
+        else if typeof(each) == "file" then
+            if key == "name" and each.name == value then ret.push(each)
+            if key == "namehas" and each.name.is_match(value) then ret.push(each)
+            if key == "path" and each.path == value then ret.push(each)
+            if key == "permissions" and each.permissions == value then ret.push(each)
+            if key == "has_permission" then
+                v = value.values
+                c = ""
+                for p in v
+                    if each.has_permission(p) then c = c + p
+                end for
+                if c == value then ret.push(each)
+            end if
+            if key == "size" and each.size == value then ret.push(each)
+        else if typeof(each) == "port" then
+            if key == "port_number" and each.port_number == value then ret.push(each)
+            if key == "is_closed" and each.is_closed == value then ret.push(each)
+            if key == "get_lan_ip" and each.get_lan_ip == value then ret.push(each)
+        else if typeof(each) == "map" then
+            if each[key] == value then ret.push(each)
+        end if
+    end for
+    if ret.len > 0 then return ret
+    return null
+end function
+//Find function for greyscript
+//By MachaCeleste 20240516
+Find = {}
+    Find.fs = []
+    Find.get = function(i)
+        self.fs.push(i)
+        for f in i.get_files
+            self.fs.push(f)
+        end for
+        for f in i.get_folders
+            self.get(f)
+        end for
+    end function
+    Find.run = function(n)
+        self.get(File(host_computer(get_shell), "/"))
+        file = self.fs.first("name", n)
+        return file
+    end function
+//List trim extension for greyscript
+// By MachaCeleste 20240401
+list.trim = function
+    i = 0
+    for each in self
+        if each == "" then self.remove(i)
+        i = i + 1
+    end for
+end function
+//Hopper for greyscript
+// By MachaCeleste 20240401
+Wifi = {}
+    Wifi.essid = ""
+    Wifi.pass = ""
+Hopper = {}
+    Hopper.package = {}
+    Hopper.incCr = function
+        self.package.cr = include_lib("/lib/crypto.so")
+        if not self.package.cr then self.package.cr = include_lib(current_path + "/crypto.so")
+        if not self.package.cr then
+            find = new Find
+            cr = find.run("crypto.so")
+            self.package.cr = include_lib(cr.path)
+        end if
+        if not self.package.cr then exit("Error: crypto.so not found!")
+    end function
+    Hopper.selDev = function
+        info = "SEL DEVICE CHIPSET MONITOR\n"
+        devs = []
+        for each in self.package.hc.network_devices.split(char(10))
+            if each.is_match("wlan") then devs.push(each)
+        end for
+        i = 0
+        for each in devs
+            i = i + 1
+            info = info + "[" + i + "] " + each + "\n"
+        end for
+        print(format_columns(info))
+        self.package.dev = devs[(user_input("Select a device:\n").to_int - 1)].split(" ")[0]
+    end function
+    Hopper.airmon = function(x)
+        out = self.package.cr.airmon(x, self.package.dev)
+        if not out then exit("Airmon " + x + ": Device not found!")
+        if typeof(out) == "string" then exit("Airmon " + x + ": " + out)
+    end function
+    Hopper.iwlist = function
+        wlans = self.package.hc.wifi_networks(self.package.dev)
+        if not wlans then exit("IWList: No wifi networks found!")
+        info = "BSSID PWR ESSID\n"
+        for wlan in wlans
+            info = info + wlan + "\n"
+        end for
+        print(format_columns(info))
+        return wlans
+    end function
+    Hopper.write = function(x)
+        get = self.package.db.get_content
+        if get == null then exit("Read Error!")
+        sp = get.split(char(10))
+        sp.push(x)
+        set = self.package.db.set_content(sp.join(char(10)).trim)
+        if typeof(set) == "string" then exit("Write Error: " + set)
+    end function
+    Hopper.read = function
+        get = self.package.db.get_content
+        if get == null then exit("Read Error!")
+        return get.split(char(10))
+    end function
+    Hopper.load = function(wifi)
+        sp = wifi.split(" ")
+        db = self.read
+        key = db.first("contains", sp[0] + "," + sp[2])
+        if key != null then return key.split(",")[2]
+    end function
+    Hopper.crack = function(wifi)
+        sp = wifi.split(" ")
+        db = self.read
+        key = db.first("contains", sp[0] + "," + sp[2])
+        if key != null then return key.split(",")[2]
+        signal = sp[1][:-1].to_int
+        if signal < self.package.power then return null
+        acks = round(300000/signal)+1
+        if acks > 25000 then acks = 25000
+        print("Getting " + acks + " acks...")
+        res = self.package.cr.aireplay(sp[0], sp[2], acks)
+        if typeof(res) == "string" then
+            if not res.is_match("Target is out of reach") then return null
+            print("Aireplay: " + res)
+            return null
+        end if
+        find = new Find
+        file = find.run("file.cap")
+        if not file then exit("Aircrack: Couldn't find file.cap!")
+        key = self.package.cr.aircrack(file.path)
+        if not key then
+            print("Aircrack: Couldn't crack key!")
+            return null
+        end if
+        file.delete
+        print("Key found!")
+        return key
+    end function
+    Hopper.scan = function
+        isScan = self.package.scan
+        if isScan then self.airmon("start")
+        for wifi in self.iwlist
+            key = null
+            if isScan then
+                key = self.crack(wifi)
+            else
+                key = self.load(wifi)
+            end if
+            if not key then continue
+            sp = wifi.split(" ")
+            w = new Wifi
+            w.essid = sp[2]
+            w.pass = key
+            self.package.wifi[sp[0]] = w
+            if isScan then self.write(sp[0] + "," + sp[2] + "," + key)
+        end for
+        if isScan then self.airmon("stop")
+    end function
+    Hopper.connect = function(x)
+        wifi = self.package.wifi[x]
+        print("Connecting: " + x + wifi.essid)
+        out = self.package.hc.connect_wifi(self.package.dev, x, wifi.essid, wifi.pass)
+        if typeof(out) == "string" then print("Hopper: " + out)
+    end function
+    Hopper.run = function
+        self.package.hc = get_shell.host_computer
+        self.incCr
+        self.selDev
+        self.package.wifi = {}
+        self.package.db = self.package.hc.File(current_path + "/wifi.db")
+        if not self.package.db then
+            out = self.package.hc.touch(current_path, "wifi.db")
+            if typeof(out) == "string" then exit("Database: " + out)
+            self.package.db = self.package.hc.File(current_path + "/wifi.db")
+        end if
+        db = self.read
+        self.package.hasDb = false
+        if db.len > 2 then self.package.hasDb = true
+        self.package.scan = true
+        if self.package.hasDb then
+            i = user_input("Wifis in db: " + db.len + "\nWould you like to scan more? y/n\n")
+            if i != "y" then self.package.scan = false
+        end if
+        if self.package.scan then
+            i = user_input("Select min signal strength: (rec 50%)\n").to_int
+            if typeof(i) == "string" or i > 100 or i < 0 then exit("Invalid setting!")
+            self.package.power = i
+        end if
+        self.scan
+        if self.package.wifi.len < 2 then exit("Error: Need at least 2 wifis in database for hopper to run!")
+        i = user_input("Please enter a hoptime in seconds: (min 2)\n").val
+        if typeof(i) == 0 or i < 2 then
+            print("Invalid hoptime, minimum is 2 seconds! Set to 2...")
+            i = 2
+        end if
+        while true
+            for wifi in self.package.wifi
+                self.connect(wifi.key)
+                wait(i)
+            end for
+        end while
+    end function
+
+print("\n<align=center>Celestial Tools" + char(169) + "</align>\n<align=center>Hopper</align>\n")
+if params.len > 0 and params.hasIndex(0) and params[0] == "-h" then exit("Usage: hopper\nBe sure to cd to the folder where hopper is located in terminal before running!!")
+if program_path != current_path + "/hopper" then exit("You are not targeting the correct directory, cd to the folder where hopper is located before launching!")
+Hopper.run

@@ -1,0 +1,72 @@
+//autocrack tool for greyscript
+//By MachaCeleste 20240210
+    autocrack = function
+        fs = []
+        getTree = function(f)
+            fs.push(f)
+            for each in f.get_files
+                fs.push(each)
+            end for
+            for each in f.get_folders
+                getTree(each)
+            end for
+        end function
+        hc = host_computer(get_shell)
+        root = hc.File("/")
+        getTree(root)
+        crf = null
+        for f in fs
+            if f.name == "crypto.so" then
+                crf = f
+                break
+            end if
+        end for
+        if not crf then exit("Error: No crypto lib found!")
+        cr = include_lib(crf.path)
+        if not cr then exit("Error: " + crf.path + " isn't crypto.so!")
+        info = "SEL DEVICE CHIPSET MONITOR"
+        i = 0
+        devs = []
+        for each in hc.network_devices.split(char(10))
+            if each.is_match("wlan") then devs.push(each)
+        end for
+        for each in devs
+            i = i + 1
+            info = info + "\n[" + i + "] " + each
+        end for
+        print(format_columns(info))
+        dev = devs[(user_input("Select a device: ").to_int - 1)].split(" ")[0]
+        output = cr.airmon("start", dev)
+        if not output then exit("Error: Device not found!")
+        if output isa string then exit(output)
+        wlans = hc.wifi_networks(dev)
+        if not wlans then exit("Error: No wifi networks found!")
+        info = "SEL BSSID PWR ESSID"
+        i = 0
+        for wlan in wlans
+            i = i + 1
+            info = info + "\n[" + i + "] " + wlan
+        end for
+        print(format_columns(info))
+        wifi = wlans[(user_input("Select a wifi: ").to_int - 1)].split(" ")
+        acks = round(300000/wifi[1][:-1].to_int)+1
+        print("<color=green>Waiting for " + acks + " acks...</color>")
+        res = cr.aireplay(wifi[0], wifi[2], acks)
+        if res isa string then exit("ERROR: " + res)
+        output = cr.airmon("stop", dev)
+        if not output then exit("Error: Device not found!")
+        file = hc.File(current_path + "/file.cap")
+        if not file then return print("Error: file.cap couldnt be located!")
+        key = cr.aircrack(file.path)
+        if not key then exit("Error: Couldnt crack key!")
+        file.delete
+        print("Key found! Key: " + key)
+        if not params.hasIndex(0) or params[0] != "-c" then
+            status = hc.connect_wifi(dev, wifi[0], wifi[2], key)
+            if status isa string then exit(status)
+            print("Wi-Fi connected!")
+        end if
+    end function
+if params.len > 1 or (params.hasIndex(0) and params[0] != "-c") then exit("Usage: aircrack <b>[-c]</b>\nCracks a selected wifi and connects automatically, -c only cracks and gives you the key.")
+print("\n<align=center>Celestial Tools" + char(169) + "</align>\n<align=center>Auto-Crack</align>\n")
+autocrack

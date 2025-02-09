@@ -1,0 +1,205 @@
+//Neurobox debugtool application for greyhack
+// by MachaCeleste 20241029
+string.color = function(hexc)
+    return "<color=" + hexc + ">" + self + "</color>"
+end function
+isNullOrEmpty = function(x)
+    if x == null or x == "" then return true
+    return false
+end function
+Toolbox = {}
+    Toolbox.package = {}
+    Toolbox.init = function
+        self.package.hs = get_shell
+        self.package.hc = host_computer(self.package.hs)
+        self.package.user = null
+        self.package.pass = null
+        self.package.Ml = null
+        self.inc
+        testLib = self.find("init.so")
+        if not testLib then exit("Couldn't find init.so to test creds against!".color("red"))
+        self.package.test = self.package.Mx.load(testLib.path)
+        m = {}
+            m.cls = {}
+                m.cls.use = "Usage: cls"
+                m.cls.desc = "Clear screen"
+                m.cls.minPar = 0
+                m.cls.req = "none"
+                m.cls.run = function(x)
+                    clear_screen
+                end function
+            m.login = {}
+                m.login.use = "Usage: login"
+                m.login.desc = "Login to neurobox account."
+                m.login.minPar = 0
+                m.login.req = "none"
+                m.login.run = function(x)
+                    user = user_input("Username: ").trim
+                    pass = user_input("Password: ", 1).trim
+                    if typeof(main.package.test.debug_tools(user, pass)) != "debugLibrary" then return print("Incorrect username or password!".color("red"))
+                    main.package.user = user
+                    main.package.pass = pass
+                    print("Login validated!")
+                end function
+            m.load = {}
+                m.load.use = "User: load <b>(libPath)</b>"
+                m.load.desc = "Load lib specified into tool."
+                m.load.minPar = 1
+                m.load.req = "login"
+                m.load.run = function(x)
+                    p = x[0]
+                    if p[0] != "/" then p = current_path + "/" + x[0]
+                    ml = main.package.Mx.load(p)
+                    if typeof(ml) != "MetaLib" then return print("Failed to load " + p)
+                    main.package.Ml = ml
+                    res = main.debug
+                    if typeof(res) == "string" then return print("Login Error: " + res)
+                    print("Loaded " + p + " " + main.package.Ml.version)
+                end function
+            m.scan = {}
+                m.scan.use = "Usage: scan"
+                m.scan.desc = "Scan loaded library for potential errors in code."
+                m.scan.minPar = 0
+                m.scan.req = "load"
+                m.scan.run = function(x)
+                    s = main.package.Dl.scan()
+                    //print(s)//Debug output
+                    if is_match(s, "No potential") then return print(s.color("red"))
+                    res = s.split("\.\n\n")
+                    output = ["", ""]
+                    for data in res
+                        if not is_match(data, "01:") then
+                            output[0] = output[0] + data + char(10)
+                            continue
+                        end if
+                        output[1] = data
+                    end for
+                    output[0] = output[0].replace("\.", "." + char(10))
+                    i = main.makeFile("instructions.txt")
+                    i.set_content(output[0])
+                    output[1] = output[1].replace("\d*: ", "")
+                    d = main.makeFile("debug.src")
+                    d.set_content(output[1])
+                    print("Debug scan results have been saved!".color("green"))
+                end function
+            m.test = {}
+                m.test.use = "Usage: test <b>(intList)</b>"
+                m.test.desc = "Conduct automated testing of lines specified. (intList example: 1,2,3 <b>NO SPACES</b>)"
+                m.test.minPar = 1
+                m.test.req = "load"
+                m.test.run = function(x)
+                    if x.len > 1 then return print("Do not space list! (intList example: 1,2,3 <b>NO SPACES</b>)")
+                    i = x[0].split(",")
+                    lines = []
+                    for line in i
+                        lines.push(line.to_int)
+                    end for
+                    print("Input: " + lines)
+                    print("\n" + main.package.Dl.unit_testing(lines))
+                end function
+            m.patch = {}
+                m.patch.use = "Usage: patch <b>(path</b>)"
+                m.patch.desc = "Apply patch to file at path."
+                m.patch.minPar = 1
+                m.patch.req = "load"
+                m.patch.run = function(x)
+                    p = x[0]
+                    if p[0] != "/" then p = current_path + "/" + x[0]
+                    print(main.package.Dl.apply_patch(p))
+                end function
+            m.exit = {}
+                m.exit.use = "Usage: exit"
+                m.exit.desc = "Exit program."
+                m.exit.minPar = 0
+                m.exit.req = "none"
+                m.exit.run = function(x)
+                    exit("Thank you for chosing Celestial tools!")
+                end function
+        x = new self
+            x.cmd = m
+        return x
+    end function
+    Toolbox.inc = function
+        self.package.Mx = include_lib("/lib/metaxploit.so")
+        if not self.package.Mx then self.package.Mx = include_lib(current_path + "/metaxploit.so")
+        if not self.package.Mx then
+            mxf = self.find("metaxploit.so")
+            if mxf then self.package.Mx = include_lib(mxf.path)
+        end if
+        if not self.package.Mx then exit("Couldn't find metaxploit anywhere!".color("red"))
+    end function
+    Toolbox.makeFile = function(n)
+        f = main.package.hc.File(current_path + "/" + n)
+        if typeof(f) == "file" then return f
+        o = main.package.hc.touch(current_path, n)
+        if typeof(o) == "string" then return print(("Error: " + o).color("red"))
+        f = main.package.hc.File(current_path + "/" + n)
+        if typeof(f) != "file" then return print("Error getting output file.".color("red"))
+        return f
+    end function
+    Toolbox.debug = function
+        dl = main.package.Ml.debug_tools(main.package.user, main.package.pass)
+        if typeof(dl) != "debugLibrary" then return print("Error: " + dl)
+        self.package.Dl = dl
+        return true
+    end function
+    Toolbox.find = function(x)
+        fs = []
+        Get = function(i)
+            fs.push(i)
+            for f in i.get_files
+                fs.push(f)
+            end for
+            for f in i.get_folders
+                Get(f)
+            end for
+        end function
+        Get(self.package.hc.File("/"))
+        for f in fs
+            if f.name == x then return f
+        end for
+        return null
+    end function
+    Toolbox.help = function
+        for each in self.cmd.indexes
+            cmd = self.cmd[each]
+            if cmd.hasIndex("run") and cmd.hasIndex("desc") then print(cmd.use.color("purple") + "\n" + cmd.desc.color("#f5a8b8"))
+        end for
+    end function
+    Toolbox.run = function
+        while true
+            account = "Not logged in!".color("red")
+            lib = "Null".color("red")
+            if isNullOrEmpty(self.package.user) == 0 and isNullOrEmpty(self.package.pass) == 0 then account = ("Logged in as: " + self.package.user).color("green")
+            if isNullOrEmpty(self.package.Ml) == 0 then lib = (self.package.Ml.lib_name + " v" + self.package.Ml.version).color("green")
+            choice = user_input("<size=80%>" + account + "</size><pos=0%><voffset=-1.2em>[" + active_user + "@" + self.package.hc.get_name + " " + lib + "] ").trim
+            if choice == "" then continue
+            if choice == "-h" or choice == "help" then
+                self.help
+                continue
+            end if
+            choice = choice.split(" ")
+            if self.cmd.hasIndex(choice[0].lower) then
+                if self.cmd[choice[0].lower].minPar > choice[1:].len or (choice.hasIndex(1) and choice[1] == "-h") then
+                    print(self.cmd[choice[0].lower].use.color("purple")+char(10)+self.cmd[choice[0].lower].desc.color("#f5a8b8"))
+                    continue
+                end if
+                if self.cmd[choice[0].lower].req == "login" and (isNullOrEmpty(self.package.user) == 1 or isNullOrEmpty(self.package.pass) == 1) then
+                    print("You are not logged in!".color("red"))
+                    continue
+                end if
+                if self.cmd[choice[0].lower].req == "load" and self.package.Ml == null then
+                    print("That requires a loaded library!".color("red"))
+                    continue
+                end if
+                f = @self.cmd[choice[0].lower].run
+                if choice.len > 1 then f(choice[1:]) else f
+            else
+                print("Invalid command!".color("red"))
+            end if
+        end while
+    end function
+print("\n<align=""center"">Celestial Tools" + char(169) + "</align>\n<align=""center""><size=50px>Neurobox Debugtool</size></align>\n<align=""center"">v1.0.0</align>\n")
+print("Initializing...")
+main = Toolbox.init
+main.run

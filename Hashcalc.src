@@ -1,0 +1,28 @@
+//CPU calculator for greyscript
+// By MachaCeleste 20240414
+HashCalc = {}
+    HashCalc.cpus = []
+    HashCalc.getspeed = function
+        a = 0
+        for i in range(0, self.cpus.len - 1)
+            sp = self.cpus[i].split(":")
+            b = 30 / sp[0].val * 1.65
+            b = b - ((sp[1].to_int * 4) * b / 100)
+            if b > a then a = b
+        end for
+        return a / self.cpus.len
+    end function
+    HashCalc.run = function
+        input = function
+            return user_input("Speed: ") + ":" + user_input("Cores: ")
+        end function
+        a = user_input("Number of CPUs: ").to_int
+        b = user_input("Matched? y/n: ")
+        if b == "y" then i = input
+        while self.cpus.len < a
+            if b != "y" then i = input
+            self.cpus.push(i)
+        end while
+        print(self.getspeed)
+    end function
+HashCalc.run

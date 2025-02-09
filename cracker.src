@@ -1,0 +1,17 @@
+crypto = include_lib("/lib/crypto.so")
+if not crypto then crypto = include_lib(current_path + "/crypto.so")
+if not crypto then exit("Error: Can't find crypto library in the /lib path")
+
+if params.len != 1 or params[0] == "-h" or params[0] == "--help" then exit("<b>Usage: " + program_path.split("/")[-1] + " [encrypted password/path to file]</b>")
+file = File(host_computer(get_shell), params[0])
+if not file then exit(decipher(crypto, params[0]))
+accounts = file.get_content.split(char(10))
+info = "User Password"
+for account in accounts
+    account = account.trim
+    if account.len < 33 then continue
+    enc = account.split(":")
+    dec = decipher(crypto, enc[1])
+    info = info + "\n" + enc[0] + " " + dec
+end for
+print(format_columns(info))

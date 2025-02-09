@@ -1,0 +1,71 @@
+//DateTime functionality for greyscript
+// By MachaCeleste 20240405
+DateTime = {}
+    DateTime.year = 0
+    DateTime.month = 0
+    DateTime.day = 0
+    DateTime.hour = 0
+    DateTime.minute = 0
+    DateTime.minutes = 0
+    DateTime.isSpan = false
+    DateTime.negative = false
+    DateTime.months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    DateTime.year_days = function(year)
+        leap = 366 * floor(year/4+1)
+        norm = 365 * (year-floor(year/4+1))
+        return (leap + norm) * (year>0)
+    end function
+    DateTime.init = function(x)
+        month_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        dt = x.split(" - ")
+        d = dt[0].split("/")
+        self.year = d[2].to_int
+        self.month = self.months.indexOf(d[1])+1
+        self.day = d[0].to_int
+        t = dt[1].split(":")
+        self.hour = t[0].to_int
+        self.minute = t[1].to_int
+        self.minutes = (((self.year_days(self.year - 2000) + sum(month_days[:self.months.indexOf(d[1])]) + self.day - 1) * 24 + self.hour - 1) * 60 + self.minute)
+    end function
+    DateTime.now = function
+        n = new self
+        n.init(current_date)
+        return n
+    end function
+    DateTime.parse = function(x)
+        n = new self
+        n.init(x)
+        return n
+    end function
+    DateTime.to_string = function
+        day = self.day
+        if day < 10 then day = "0" + self.day
+        minute = self.minute
+        if minute < 10 then minute = "0" + self.minute
+        if self.isSpan then return null
+        return day + "/" + self.months[self.month-1] + "/" + self.year + " - " + self.hour + ":" + minute
+    end function
+    DateTime.span = function(x, y)
+        n = self.parse(y)
+        i = self.parse(x)
+        o = new self
+        o.isSpan = true
+        o.minutes = n.minutes - i.minutes
+        return o
+    end function
+    DateTime.real = function
+        if self.minutes <= 0 then return null
+        irlsec = self.minutes*(60/14)
+        rsec = irlsec%60
+        if rsec < 10 then rsec = "0" + rsec
+        rmin = irlsec/60
+        if rmin > 60 then rmin = rmin%60
+        if rmin < 10 then rmin = "0" + rmin
+        rhour = irlsec/3600
+        if rhour > 23 then rhour = rhour%24
+        rday = irlsec/86400
+        return floor(rday) + "day " + floor(rhour) + "hour " + floor(rmin) + "min " + floor(rsec) + "sec"
+    end function
+
+timeSpan = DateTime.span(user_input("Enter date stamp:\n"), current_date)
+print(timeSpan.real + " ago")

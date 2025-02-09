@@ -1,0 +1,10 @@
+//MD5 Checksum tool for greyscript
+// by MachaCeleste 20241117
+if params.len != 1 or params[0] == "-h" or params[0] == "--help" then exit("Usage: checksum <b>(pathtofile)</b>")
+file = get_shell.host_computer.File(params[0])
+if not file then exit("File not found!")
+if file.is_binary then exit("File can not be binary!")
+s = file.get_content
+if s == "" then exit("File is empty!")
+hashed = md5(s)
+print("MD5 checksum: " + hashed)
