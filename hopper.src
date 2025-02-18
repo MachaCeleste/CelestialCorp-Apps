@@ -159,8 +159,7 @@ Hopper = {}
         if key != null then return key.split(",")[2]
         signal = sp[1][:-1].to_int
         if signal < self.package.power then return null
-        acks = round(300000/signal)+1
-        if acks > 25000 then acks = 25000
+        acks = round(300000/(signal + 15))+1
         print("Getting " + acks + " acks...")
         res = self.package.cr.aireplay(sp[0], sp[2], acks)
         if typeof(res) == "string" then
