@@ -49,7 +49,7 @@
         end for
         print(format_columns(info))
         wifi = wlans[(user_input("Select a wifi: ").to_int - 1)].split(" ")
-        acks = round(300000/(wifi[1][:-1].to_int + 15))+1
+        acks = ceil(300000/(wifi[1][:-1].to_int + 15))+1
         print("<color=green>Waiting for " + acks + " acks...</color>")
         res = cr.aireplay(wifi[0], wifi[2], acks)
         if res isa string then exit("ERROR: " + res)
