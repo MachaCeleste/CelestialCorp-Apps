@@ -1,0 +1,17 @@
+string.GetSize = function(isLib)
+    sLib = 7100000
+    if isLib then sLib = 650000
+    num = 110000
+    num2 = sLib - num
+    num3 = 0.0
+    num4 = 1
+    for c in self.values
+        num3 = num3 + (c.code * num4)
+        num4 = num4 + 1
+    end for
+    num5 = num3 % 1000.0 / 1000.0
+    num6 = num + num2 * num5
+    num7 = num3 % 10.0
+    return num6 + num7
+    end function
+print(user_input("File name: ").GetSize(false))
