@@ -1,65 +1,36 @@
-//LinQ lib functionality for greyscript
-//By MachaCeleste 20240205
-list.first = function(key, value)
-    for each in self
-        if typeof(each) == "string" then
-            if key == "is" and each == value then return each
-            if key == "contains" and each.is_match(value) then return each
-        else if typeof(each) == "file" then
-            if key == "name" and each.name == value then return each
-            if key == "namehas" and each.name.is_match(value) then ret.push(each)
-            if key == "path" and each.path == value then return each
-            if key == "permissions" and each.permissions == value then return each
-            if key == "has_permission" then
-                v = value.values
-                c = ""
-                for p in v
-                    if each.has_permission(p) then c = c + p
-                end for
-                if c == value then return each
-            end if
-            if key == "size" and each.size == value then return each
-        else if typeof(each) == "port" then
-            if key == "port_number" and each.port_number == value then return each
-            if key == "is_closed" and each.is_closed == value then return each
-            if key == "get_lan_ip" and each.get_lan_ip == value then return each
-        else if typeof(each) == "map" then
-            if each[key] == value then return each
+//LinQ v2 lib functionality for greyscript
+//By MachaCeleste 20250210
+Linq = function(e,k,v)
+    if typeof(e)=="file" then
+        if k=="namehas" then
+            if e.name.is_match(v) then return true
         end if
+        if k=="has_permission" then
+            s=v.values
+            c=""
+            for p in s
+                if e.has_permission(p) then c=c+p
+            end for
+            if c==v then return true
+            return false
+        end if
+    end if
+    if e isa string then
+        if k=="is" and e==v then return true
+        if k=="contains" and e.is_match(v) then return true
+        return false
+    end if
+    if not e.values[0].hasIndex(k) then return print("Index " + k + " not found in map!")
+    f = @e[k]
+    if f(e)==v then return true
+    return false
+    end function
+list.first = function(k,v)
+    for e in self
+        if Linq(e,k,v) then return e
     end for
     return null
-end function
-list.where = function(key, value)
-    ret = []
-    for each in self
-        if typeof(each) == "string" then
-            if key == "is" and each == value then ret.push(each)
-            if key == "contains" and each.is_match(value) then ret.push(each)
-        else if typeof(each) == "file" then
-            if key == "name" and each.name == value then ret.push(each)
-            if key == "namehas" and each.name.is_match(value) then ret.push(each)
-            if key == "path" and each.path == value then ret.push(each)
-            if key == "permissions" and each.permissions == value then ret.push(each)
-            if key == "has_permission" then
-                v = value.values
-                c = ""
-                for p in v
-                    if each.has_permission(p) then c = c + p
-                end for
-                if c == value then ret.push(each)
-            end if
-            if key == "size" and each.size == value then ret.push(each)
-        else if typeof(each) == "port" then
-            if key == "port_number" and each.port_number == value then ret.push(each)
-            if key == "is_closed" and each.is_closed == value then ret.push(each)
-            if key == "get_lan_ip" and each.get_lan_ip == value then ret.push(each)
-        else if typeof(each) == "map" then
-            if each[key] == value then ret.push(each)
-        end if
-    end for
-    if ret.len > 0 then return ret
-    return null
-end function
+    end function
 //Find function for greyscript
 //By MachaCeleste 20240516
 Find = {}
@@ -72,12 +43,12 @@ Find = {}
         for f in i.get_folders
             self.get(f)
         end for
-    end function
+        end function
     Find.run = function(n)
         self.get(File(host_computer(get_shell), "/"))
         file = self.fs.first("name", n)
         return file
-    end function
+        end function
 //List trim extension for greyscript
 // By MachaCeleste 20240401
 list.trim = function
@@ -86,9 +57,10 @@ list.trim = function
         if each == "" then self.remove(i)
         i = i + 1
     end for
-end function
+    end function
 //Hopper for greyscript
 // By MachaCeleste 20240401
+__v = "v1.0.5"
 Wifi = {}
     Wifi.essid = ""
     Wifi.pass = ""
@@ -103,7 +75,7 @@ Hopper = {}
             self.package.cr = include_lib(cr.path)
         end if
         if not self.package.cr then exit("Error: crypto.so not found!")
-    end function
+        end function
     Hopper.selDev = function
         info = "SEL DEVICE CHIPSET MONITOR\n"
         devs = []
@@ -117,12 +89,12 @@ Hopper = {}
         end for
         print(format_columns(info))
         self.package.dev = devs[(user_input("Select a device:\n").to_int - 1)].split(" ")[0]
-    end function
+        end function
     Hopper.airmon = function(x)
         out = self.package.cr.airmon(x, self.package.dev)
         if not out then exit("Airmon " + x + ": Device not found!")
         if typeof(out) == "string" then exit("Airmon " + x + ": " + out)
-    end function
+        end function
     Hopper.iwlist = function
         wlans = self.package.hc.wifi_networks(self.package.dev)
         if not wlans then exit("IWList: No wifi networks found!")
@@ -132,7 +104,7 @@ Hopper = {}
         end for
         print(format_columns(info))
         return wlans
-    end function
+        end function
     Hopper.write = function(x)
         get = self.package.db.get_content
         if get == null then exit("Read Error!")
@@ -140,18 +112,18 @@ Hopper = {}
         sp.push(x)
         set = self.package.db.set_content(sp.join(char(10)).trim)
         if typeof(set) == "string" then exit("Write Error: " + set)
-    end function
+        end function
     Hopper.read = function
         get = self.package.db.get_content
         if get == null then exit("Read Error!")
         return get.split(char(10))
-    end function
+        end function
     Hopper.load = function(wifi)
         sp = wifi.split(" ")
         db = self.read
         key = db.first("contains", sp[0] + "," + sp[2])
         if key != null then return key.split(",")[2]
-    end function
+        end function
     Hopper.crack = function(wifi)
         sp = wifi.split(" ")
         db = self.read
@@ -178,7 +150,7 @@ Hopper = {}
         file.delete
         print("Key found!")
         return key
-    end function
+        end function
     Hopper.scan = function
         isScan = self.package.scan
         if isScan then self.airmon("start")
@@ -198,13 +170,13 @@ Hopper = {}
             if isScan then self.write(sp[0] + "," + sp[2] + "," + key)
         end for
         if isScan then self.airmon("stop")
-    end function
+        end function
     Hopper.connect = function(x)
         wifi = self.package.wifi[x]
         print("Connecting: " + x + wifi.essid)
         out = self.package.hc.connect_wifi(self.package.dev, x, wifi.essid, wifi.pass)
         if typeof(out) == "string" then print("Hopper: " + out)
-    end function
+        end function
     Hopper.run = function
         self.package.hc = get_shell.host_computer
         self.incCr
@@ -242,9 +214,9 @@ Hopper = {}
                 wait(i)
             end for
         end while
-    end function
+        end function
 
-print("\n<align=center>Celestial Tools" + char(169) + "</align>\n<align=center>Hopper</align>\n")
+print("\n<align=center>Celestial Tools" + char(169) + "</align>\n<align=center>Hopper</align>\n<align=""center"">" + __v + "</align>\n")
 if params.len > 0 and params.hasIndex(0) and params[0] == "-h" then exit("Usage: hopper\nBe sure to cd to the folder where hopper is located in terminal before running!!")
 if program_path != current_path + "/hopper" then exit("You are not targeting the correct directory, cd to the folder where hopper is located before launching!")
 Hopper.run

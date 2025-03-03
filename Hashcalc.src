@@ -11,7 +11,7 @@ HashCalc = {}
             if b > a then a = b
         end for
         return a / self.cpus.len
-    end function
+        end function
     HashCalc.run = function
         input = function
             return user_input("Speed: ") + ":" + user_input("Cores: ")
@@ -24,5 +24,5 @@ HashCalc = {}
             self.cpus.push(i)
         end while
         print(self.getspeed)
-    end function
+        end function
 HashCalc.run

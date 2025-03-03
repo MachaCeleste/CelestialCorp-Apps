@@ -14,7 +14,7 @@ DateTime = {}
         leap = 366 * floor(year/4+1)
         norm = 365 * (year-floor(year/4+1))
         return (leap + norm) * (year>0)
-    end function
+        end function
     DateTime.init = function(x)
         month_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
         dt = x.split(" - ")
@@ -26,17 +26,17 @@ DateTime = {}
         self.hour = t[0].to_int
         self.minute = t[1].to_int
         self.minutes = (((self.year_days(self.year - 2000) + sum(month_days[:self.months.indexOf(d[1])]) + self.day - 1) * 24 + self.hour - 1) * 60 + self.minute)
-    end function
+        end function
     DateTime.now = function
         n = new self
         n.init(current_date)
         return n
-    end function
+        end function
     DateTime.parse = function(x)
         n = new self
         n.init(x)
         return n
-    end function
+        end function
     DateTime.to_string = function
         day = self.day
         if day < 10 then day = "0" + self.day
@@ -44,7 +44,7 @@ DateTime = {}
         if minute < 10 then minute = "0" + self.minute
         if self.isSpan then return null
         return day + "/" + self.months[self.month-1] + "/" + self.year + " - " + self.hour + ":" + minute
-    end function
+        end function
     DateTime.span = function(x, y)
         n = self.parse(y)
         i = self.parse(x)
@@ -52,7 +52,7 @@ DateTime = {}
         o.isSpan = true
         o.minutes = n.minutes - i.minutes
         return o
-    end function
+        end function
     DateTime.real = function
         if self.minutes <= 0 then return null
         irlsec = self.minutes*(60/14)
@@ -65,7 +65,7 @@ DateTime = {}
         if rhour > 23 then rhour = rhour%24
         rday = irlsec/86400
         return floor(rday) + "day " + floor(rhour) + "hour " + floor(rmin) + "min " + floor(rsec) + "sec"
-    end function
-
+        end function
+if params.len != 0 and params[0] == "-h" or params[0] == "--help" then exit("Usage: realtime\nTakes a past DateTime string and returns how long ago it was, example format: 01/Jan/2001 - 16:05")
 timeSpan = DateTime.span(user_input("Enter date stamp:\n"), current_date)
 print(timeSpan.real + " ago")

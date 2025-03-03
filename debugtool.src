@@ -1,5 +1,6 @@
 //Neurobox debugtool application for greyhack
 // by MachaCeleste 20241029
+__v = "v1.0.1"
 string.color = function(hexc)
     return "<color=" + hexc + ">" + self + "</color>"
 end function
@@ -107,6 +108,15 @@ Toolbox = {}
                     if p[0] != "/" then p = current_path + "/" + x[0]
                     print(main.package.Dl.apply_patch(p))
                 end function
+            m.check = {}
+                m.check.use = "Usage: check"
+                m.check.desc = "Checks when a file will be patched until."
+                m.check.minPar = 0
+                m.check.req = "load"
+                m.check.run = function(x)
+                    if not self.package.Ml.is_patched then return print("This library is not yet patched!".color("red"))
+                    print("Library patched!".color("green") + "\n" + ("Date until patch expires: " + self.package.Ml.is_patched(true)).color("green"))
+                end function
             m.exit = {}
                 m.exit.use = "Usage: exit"
                 m.exit.desc = "Exit program."
@@ -170,8 +180,10 @@ Toolbox = {}
         while true
             account = "Not logged in!".color("red")
             lib = "Null".color("red")
+            isPatched = "green"
+            if self.package.Ml.is_patched then isPatched = "purple"
             if isNullOrEmpty(self.package.user) == 0 and isNullOrEmpty(self.package.pass) == 0 then account = ("Logged in as: " + self.package.user).color("green")
-            if isNullOrEmpty(self.package.Ml) == 0 then lib = (self.package.Ml.lib_name + " v" + self.package.Ml.version).color("green")
+            if isNullOrEmpty(self.package.Ml) == 0 then lib = (self.package.Ml.lib_name + " v" + self.package.Ml.version).color(isPatched)
             choice = user_input("<size=80%>" + account + "</size><pos=0%><voffset=-1.2em>[" + active_user + "@" + self.package.hc.get_name + " " + lib + "] ").trim
             if choice == "" then continue
             if choice == "-h" or choice == "help" then
@@ -199,7 +211,7 @@ Toolbox = {}
             end if
         end while
     end function
-print("\n<align=""center"">Celestial Tools" + char(169) + "</align>\n<align=""center""><size=50px>Neurobox Debugtool</size></align>\n<align=""center"">v1.0.0</align>\n")
+print("\n<align=""center"">Celestial Tools" + char(169) + "</align>\n<align=""center""><size=50px>Neurobox Debugtool</size></align>\n<align=""center"">" + __v + "</align>\n")
 print("Initializing...")
 main = Toolbox.init
 main.run
