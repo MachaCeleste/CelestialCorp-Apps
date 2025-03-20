@@ -1,6 +1,6 @@
 //Neurobox debugtool application for greyhack
 // by MachaCeleste 20241029
-__v = "v1.0.1"
+__v = "v1.0.3"
 string.color = function(hexc)
     return "<color=" + hexc + ">" + self + "</color>"
 end function
@@ -37,7 +37,8 @@ Toolbox = {}
                 m.login.run = function(x)
                     user = user_input("Username: ").trim
                     pass = user_input("Password: ", 1).trim
-                    if typeof(main.package.test.debug_tools(user, pass)) != "debugLibrary" then return print("Incorrect username or password!".color("red"))
+                    test = main.package.test.debug_tools(user, pass)
+                    if test isa string then return print(test.color("red"))
                     main.package.user = user
                     main.package.pass = pass
                     print("Login validated!")
@@ -181,7 +182,7 @@ Toolbox = {}
             account = "Not logged in!".color("red")
             lib = "Null".color("red")
             isPatched = "green"
-            if self.package.Ml.is_patched then isPatched = "purple"
+            if self.package.Ml and self.package.Ml.is_patched then isPatched = "purple"
             if isNullOrEmpty(self.package.user) == 0 and isNullOrEmpty(self.package.pass) == 0 then account = ("Logged in as: " + self.package.user).color("green")
             if isNullOrEmpty(self.package.Ml) == 0 then lib = (self.package.Ml.lib_name + " v" + self.package.Ml.version).color(isPatched)
             choice = user_input("<size=80%>" + account + "</size><pos=0%><voffset=-1.2em>[" + active_user + "@" + self.package.hc.get_name + " " + lib + "] ").trim
