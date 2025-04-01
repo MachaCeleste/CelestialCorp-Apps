@@ -1,0 +1,229 @@
+//String lib functionality for greyscript
+// By MachaCeleste 20240305
+string.color = function(hexc)
+    return "<color=" + hexc + ">" + self + "</color>"
+    end function
+string.trimchar = function(charSet)
+    for c in charSet
+    if self[0].is_match(c) then self = self[1:]
+    if self[-1].is_match(c) then self = self[:-1]
+    end for
+    return self
+    end function
+//Random ported from .net4 to greyscript
+// By MachaCeleste 20240323
+Random = {}
+    Random.MaxValue = 2147483647
+    Random.MinValue = -2147483648
+    Random._seedArray = [0]*56
+    Random._inext = 0
+    Random.inextp = 0
+    Random.seed = null
+    Random.init = function(seed)
+        if not seed then seed = round((rnd*(self.MaxValue-self.MinValue))+self.MinValue)
+        self.seed = seed
+        num = 0
+        num2 = abs(seed)
+        if seed == self.MinValue then num2 = self.MaxValue
+        num3 = 161803398 - num2
+        self._seedArray[55] = num3
+        num4 = 1
+        for i in range(1, 54)
+            num = num + 21
+            if num >= 55 then num = num - 55
+            self._seedArray[num] = num4
+            num4 = num3 - num4
+            if num4 < 0 then num4 = num4 + self.MaxValue
+            num3 = self._seedArray[num]
+        end for
+        for j in range(1, 4)
+            for k in range(1, 55)
+                num5 = k + 30
+                if num5 >= 55 then num5 = num5 - 55
+                self._seedArray[k] = self._seedArray[k] - self._seedArray[1 + num5]
+                if self._seedArray[k] < 0 then self._seedArray[k] = self._seedArray[k] + self.MaxValue
+            end for
+        end for
+        self._inext = 0
+        self._inextp = 21
+        seed = 1
+        end function
+    Random.Next = function(max, min = null)
+        if not min then
+            if max < 0 then exit("Error: Max must be greater than zero.")
+            return self.sample * max
+        end if
+        if min > max then exit("Error: Min cannot be greater than Max.")
+        num = max - min
+        if num <= 2147483647 then return self.sample * num + min
+        return self.getlongsample * num + min
+        end function
+    Random.sample = function
+        return self.intsample * 4.656612875245797E-10
+        end function
+    Random.intsample = function
+        num = self._inext
+        num2 = self._inextp
+        num = num + 1
+        if num >= 56 then num = 1
+        num2 = num2 + 1
+        if num2 >= 56 then num2 = 1
+        num3 = self._seedArray[num] - self._seedArray[num2]
+        if num3 == 2147483647 then num3 = num3 - 1
+        if num3 < 0 then num3 = num3 + self.MaxValue
+        self._seedArray[num] = num3
+        self.inext = num
+        self.inextp = num2
+        return num3
+        end function
+    Random.getlongsample = function
+        num = self.intsample
+        if self.intsample % 2 == 0 then num = -num
+        return (num + 2147483646.0) / 4294967293.0
+        end function
+//Markov Name Generator ported from C# for greyscript
+// By MachaCeleste 20240325
+MarkovNameGenerator = {}
+    MarkovNameGenerator._order = 0
+    MarkovNameGenerator._minLength = 0
+    MarkovNameGenerator._chains = {}
+    MarkovNameGenerator._samples = []
+    MarkovNameGenerator.init = function(sampleNames, order, minLength)
+        if order < 1 then order = 1
+        if minLength < 1 then minLength = 1
+        self._order = order
+        self._minLength = minLength
+        for text in sampleNames
+            array = text.split(",")
+            for i in range(0, array.len-1)
+                text2 = array[i].trim.upper
+                if text2.len >= order + 1 then self._samples.push(text2)
+            end for
+        end for
+        for text3 in self._samples
+            for j in range(0, text3.len-order-1)
+                key = text3[j:j+order]
+                lst = []
+                if self._chains.hasIndex(key) then
+                    lst = self._chains[key]
+                else
+                    self._chains[key] = lst
+                end if
+                lst.push(text3[j + order])
+            end for
+        end for
+        end function
+    MarkovNameGenerator.NextName = function(random)
+        text = ""
+        while text.len < self._minLength
+            index = random.Next(self._samples.len)
+            length = self._samples[index].len
+            start = random.Next(length - self._order, 0)
+            text = self._samples[index][start:start+self._order]
+            while text.len < length
+                start = text.len - self._order
+                token = text[start:start+self._order]
+                if self.GetLetter(token, random) == "?" then break
+                text = text + str(self.GetLetter(token, random))
+            end while
+            if text.is_match(" ") then
+                array = text.split(" ")
+                text = ""
+                for i in range(0, array.len-1)
+                    if array[i] != "" then
+                        if array[i].len == 1 then
+                            array[i] = array[i].upper
+                        else
+                            array[i] = array[i][0:1] + array[i][1:].lower
+                        end if
+                        if text != "" then text = text + " "
+                        text = text + array[i]
+                    end if
+                end for
+            else
+                text = text[0:1] + text[1:].lower
+            end if
+        end while
+        text2 = text[0:1]
+        text3 = text[1:2]
+        if text2.lower == text3 or (text3 != "h" and text3 != "l" and text3 != "'" and (text2 + text3) != "Ch" and not self.IsVocal(text2) and (text2 + text3) != "Mc" and not self.IsVocal(text3) and text2 != "S") then text = text3.upper + text[2:]
+        return text
+        end function
+    MarkovNameGenerator.IsVocal = function(c)
+        return "aeiouAEIOU".indexOf(c) != null
+        end function
+    MarkovNameGenerator.GetLetter = function(token, random)
+        if not self._chains.hasIndex(token) then return "?"
+        lst = self._chains[token]
+        index = random.Next(lst.len)
+        return lst[index]
+        end function
+//Brute functionality for greyscript
+// By MachaCeleste 20240322
+NameBrute = {}
+    NameBrute.database = []
+    NameBrute.known = ""
+    NameBrute.rolls = 0
+    NameBrute.iter = 0
+    NameBrute.limit = 1000
+    NameBrute.output = []
+    NameBrute.Ml = null
+    NameBrute.random = null
+    NameBrute.seed = null
+    NameBrute.markovWords = null
+    NameBrute.initRandom = function
+        self.random = new Random
+        self.random.init(self.seed)
+        print("Running seed: " + self.random.seed)
+        end function
+    NameBrute.get_database = function
+        file = get_shell.host_computer.File(program_path.split("/")[:-1].join("/") + "/passwords")
+        if not file then exit("Error: File ""passwords"" not found! System requires password sample file.".color("red"))
+        self.database = file.get_content.split(char(10))
+        end function
+    NameBrute.testPass = function(p)
+        metaMail = mail_login(self.known, p)
+        if typeof(metaMail) == "string" then
+            p = p.lower
+            metaMail = mail_login(self.known, p)
+        end if
+        if typeof(metaMail) == "MetaMail" then
+            print("Roll: " + self.rolls + " Iter: " + self.iter + " In: " + time + " seconds " + " Password: " + p)
+            self.output.push(p)
+        end if
+        end function
+    NameBrute.generate = function
+        self.iter = self.iter + 1
+        return self.markovWords.NextName(self.random).trimchar("'-")
+        end function
+    NameBrute.run = function
+        self.get_database
+        hc = get_shell.host_computer
+        print("\n<align=center>Celestial Tools" + char(169) + "</align>\n<align=center>The Brute - v2.0.1</align>\n")
+        print("<align=center><color=red>WARN!</color> This will take a long time and can potentially crash!</align>")
+        self.known = user_input("Enter email: ")
+        print(("Loaded " + self.database.len + " entries...").color("green"))
+        inp = user_input("Enter seed if known: ").to_int
+        if typeof(inp) != "string" then self.seed = inp
+        if self.seed == null then
+            inp = user_input("Enter limit per seed: ").to_int
+            if typeof(inp) != "string" then self.limit = inp
+        end if
+        self.initRandom
+        self.markovWords = new MarkovNameGenerator
+        self.markovWords.init(self.database, 3, 3)
+        print("Chains generated, system ready.")
+        if user_input("--Any key to start (" + "<b>E<u>x</u>it</b>".color("red") + ")-- ", 0, 1) == "x" then exit("System Terminated!".color("red"))
+        print("Brute starting...")
+        while self.output.len < 1
+            res = self.generate
+            self.testPass(res)
+            if self.seed == null and self.iter == self.limit then
+                self.iter = 0
+                self.rolls = self.rolls + 1
+                clear_screen
+                self.initRandom
+            end if
+        end while
+        end function
+NameBrute.run
