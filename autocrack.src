@@ -61,7 +61,7 @@ autocrack = function
     key = cr.aircrack(file.path)
     if not key then exit("Error: Couldnt crack key!")
     file.delete
-    print("Key found! Key: " + key)
+    print("Key found! Key: <color=green>" + key)
     if not params.hasIndex(0) or params[0] != "-c" then
         status = hc.connect_wifi(dev, wifi[0], wifi[2], key)
         if status isa string then exit(status)
