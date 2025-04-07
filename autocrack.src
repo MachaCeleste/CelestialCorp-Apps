@@ -1,6 +1,6 @@
 //autocrack tool for greyscript
 //By MachaCeleste 20240210
-__v = "v1.0.5"
+__v = "v1.0.6"
 autocrack = function
     fs = []
     getTree = function(f)
