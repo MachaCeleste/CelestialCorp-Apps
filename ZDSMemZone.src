@@ -1,0 +1,345 @@
+__v = "v1.0.0"
+__retC = "green"
+__errC = "red"
+__path = program_path.split("/")[:-1].join("/")
+__hc = get_shell.host_computer
+//Simple string color lib functionality for greyscript
+// By MachaCeleste 20240305
+string.color = function(hexc)
+    return "<color=" + hexc + ">" + self + "</color>"
+    end function
+//Trim chars functionality for greyscript
+// By MachaCeleste 20240326
+string.trimchar = function(charSet)
+    for c in charSet
+    if self[0].is_match(c) then self = self[1:]
+    if self[-1].is_match(c) then self = self[:-1]
+    end for
+    return self
+    end function
+//int to hex implementation for greyscript
+// by machaceleste 20241204
+number.to_hex = function
+    n = self// MaxInt 2147483647/7FFFFFFF
+    if n == 0 then return "0"
+    chars = "0123456789ABCDEF"
+    res = ""
+    while n > 0
+        r = n % 16
+        res = chars[r] + res
+        n = floor(n / 16)
+    end while
+    return res
+    end function
+//List trim extension for greyscript
+// By MachaCeleste 20240401
+list.trim = function
+    i = 0
+    for each in self
+        if typeof(each) == "string" and each == "" then self.remove(i)
+        i = i + 1
+    end for
+    return self
+    end function
+//64Int library for greyscript
+// by Tanshy 20250510
+BigInt = {}
+    BigInt.makeUInt64 = function(num)
+        t = num
+        a = [0, 0, 0, 0]
+        a[0] = t % 65536
+        t = floor(t / 65536)
+        a[1] = t % 65536
+        t = floor(t / 65536)
+        a[2] = t % 65536
+        a[3] = floor(t / 65536)
+        return a
+        end function
+    BigInt.add64 = function(a, b)
+        s = [0, 0, 0, 0]
+        carry = 0
+        for i in range(0, 3)
+            sum = a[i] + b[i] + carry
+            s[i] = sum % 65536
+            carry = floor(sum / 65536)
+        end for
+        return s
+        end function
+    BigInt.add64small = function(a, sVal)
+        r = [a[0], a[1], a[2], a[3]]
+        carry = sVal
+        for i in range(0, 3)
+            if carry == 0 then break
+            sum = r[i] + carry
+            r[i] = sum % 65536
+            carry = floor(sum / 65536)
+        end for
+        return r
+        end function
+    BigInt.mul64small = function(a, m)
+        p = [0, 0, 0, 0]
+        carry = 0
+        for i in range(0, 3)
+            prod = a[i]*m + carry
+            p[i] = prod % 65536
+            carry = floor(prod / 65536)
+        end for
+        return p
+        end function
+    BigInt.isNeg64 = function(a)
+        return a[3] >= 32768
+        end function
+    BigInt.mod64small = function(a, m)
+        rem = 0
+        rem = (rem*65536 + a[3]) % m
+        rem = (rem*65536 + a[2]) % m
+        rem = (rem*65536 + a[1]) % m
+        rem = (rem*65536 + a[0]) % m
+        return rem
+        end function
+    BigInt.toNumber64 = function(a)
+        // only safe if true value <2^53
+        return a[0] + 
+            a[1]*65536 + 
+            a[2]*65536*65536 + 
+            a[3]*65536*65536*65536
+        end function
+    BigInt.sub64small = function(a, sVal)
+        BASE = 65536
+        r = [a[0], a[1], a[2], a[3]]
+        borrow = sVal
+        for i in range(0, 3)
+            if borrow == 0 then break
+            part = borrow % BASE
+            borrow = floor(borrow / BASE)
+            diff = r[i] - part
+            if diff < 0 then
+                diff = diff + BASE
+                borrow = borrow + 1
+            end if
+            r[i] = diff
+        end for
+        return r
+        end function
+//DateTime functionality for greyscript
+// By MachaCeleste 20240405
+DateTime = {}
+    DateTime.year = 0
+    DateTime.month = 0
+    DateTime.day = 0
+    DateTime.hour = 0
+    DateTime.minute = 0
+    DateTime.minutes = 0
+    DateTime.isSpan = false
+    DateTime.negative = false
+    DateTime.months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    DateTime.year_days = function(year)
+        leap = 366 * floor(year/4+1)
+        norm = 365 * (year-floor(year/4+1))
+        return (leap + norm) * (year>0)
+        end function
+    DateTime.init = function(x)
+        month_days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+        dt = x.split(" - ")
+        d = dt[0].split("/")
+        self.year = d[2].to_int
+        self.month = self.months.indexOf(d[1])+1
+        self.day = d[0].to_int
+        t = dt[1].split(":")
+        self.hour = t[0].to_int
+        self.minute = t[1].to_int
+        self.minutes = (((self.year_days(self.year - 2000) + sum(month_days[:self.months.indexOf(d[1])]) + self.day - 1) * 24 + self.hour - 1) * 60 + self.minute)
+        end function
+    DateTime.now = function
+        n = new self
+        n.init(current_date)
+        return n
+        end function
+    DateTime.parse = function(x)
+        n = new self
+        n.init(x)
+        return n
+        end function
+    DateTime.to_string = function
+        day = self.day
+        if day < 10 then day = "0" + self.day
+        minute = self.minute
+        if minute < 10 then minute = "0" + self.minute
+        if self.isSpan then return null
+        return day + "/" + self.months[self.month-1] + "/" + self.year + " - " + self.hour + ":" + minute
+        end function
+    DateTime.span = function(x, y)
+        n = self.parse(y)
+        i = self.parse(x)
+        o = new self
+        o.isSpan = true
+        o.minutes = n.minutes - i.minutes
+        return o
+        end function
+    DateTime.real = function
+        if self.minutes == 0 then return null
+        irlsec = self.minutes*(60/14)
+        rsec = irlsec%60
+        if rsec < 10 then rsec = "0" + rsec
+        rmin = irlsec/60
+        if rmin > 60 then rmin = rmin%60
+        if rmin < 10 then rmin = "0" + rmin
+        rhour = irlsec/3600
+        if rhour > 23 then rhour = rhour%24
+        rday = irlsec/86400
+        return floor(rday) + "day " + floor(rhour) + "hour " + floor(rmin) + "min " + floor(rsec) + "sec"
+        end function
+//Random ported from .net4 to greyscript
+// By MachaCeleste 20240323
+// Contributors Tanshy, IDelta
+Random = {}
+    Random.MaxValue = 2147483647
+    Random.MinValue = -2147483648
+    Random._seedArray = [0]*56
+    Random._inext = 0
+    Random._inextp = 0
+    Random.seed = null
+    Random.init = function(seed)
+        if not seed then seed = round((rnd*(self.MaxValue-self.MinValue))+self.MinValue)
+        self.seed = seed
+        num = 0
+        num2 = abs(seed)
+        if seed == self.MinValue then num2 = self.MaxValue
+        num3 = 161803398 - num2
+        self._seedArray[55] = num3
+        num4 = 1
+        i = 1
+        while i < 55
+            num = num + 21
+            if num >= 55 then num = num - 55
+            self._seedArray[num] = num4
+            num4 = num3 - num4
+            if num4 < 0 then num4 = num4 + self.MaxValue
+            num3 = self._seedArray[num]
+            i = i + 1
+        end while
+        j = 1
+        while j < 5
+            k = 1
+            while k < 56
+                num5 = k + 30
+                if num5 >= 55 then num5 = num5 - 55
+                self._seedArray[k] = self._seedArray[k] - self._seedArray[1 + num5]
+                if self._seedArray[k] < self.MinValue then self._seedArray[k] = self._seedArray[k] - 2 * self.MinValue
+                if self._seedArray[k] > self.MaxValue then self._seedArray[k] = self._seedArray[k] - 2 * self.MaxValue - 2
+                if self._seedArray[k] < 0 then self._seedArray[k] = self._seedArray[k] + self.MaxValue
+                k = k + 1
+            end while
+            j = j + 1
+        end while
+        self._inext = 0
+        self._inextp = 21
+        seed = 1
+        end function
+    Random.Next = function(max, min = null)
+        if not min then
+            if max < 0 then exit("Error: Max must be greater than zero.")
+            return self.sample * max
+        end if
+        if min > max then exit("Error: Min cannot be greater than Max.")
+        num = max - min
+        if num <= self.MaxValue then return self.sample * num + min
+        return self.getlongsample * num + min
+        end function
+    Random.sample = function
+        return self.intsample * 4.656612875245797E-10
+        end function
+    Random.intsample = function
+        num = self._inext
+        num2 = self._inextp
+        num = num + 1
+        if num >= 56 then num = 1
+        num2 = num2 + 1
+        if num2 >= 56 then num2 = 1
+        num3 = self._seedArray[num] - self._seedArray[num2]
+        if num3 == self.MaxValue then num3 = num3 - 1
+        if num3 < 0 then num3 = num3 + self.MaxValue
+        self._seedArray[num] = num3
+        self._inext = num
+        self._inextp = num2
+        return num3
+        end function
+    Random.getlongsample = function
+        num = self.intsample
+        if self.intsample % 2 == 0 then num = -num
+        num2 = num
+        num2 = num2 + 2147483646.0
+        return num2 / 4294967293.0
+        end function
+ZdsGenerator = {}
+    ZdsGenerator.libId = ["LIBSSH", "LIBFTP", "LIBHTTP", "LIBSQL", "LIBSMTP", "LIBCHAT", "LIBCAM", "LIBRSHELL", "LIBREPOSITORY", "BLOCKCHAIN", "LIBADB", "LIBSMARTAPPLIANCE", "KERNEL_ROUTER", "APTCLIENT", "METAXPLOIT", "CRYPTO", "KERNEL_MODULE", "INIT", "NET", "LIBTRAFFICNET"]
+    ZdsGenerator.listMems = []
+    ZdsGenerator.convertSeed = function(libID, worldSeed, libVersion, month, year)//ported of original work by Tanshy
+        MOD = 2147483647
+        TWO64MOD = 4
+        num = libID % 100
+        num2 = worldSeed % 1000000000
+        num3 = libVersion % 1000
+        num4 = month % 100
+        num5 = year % 10000
+        val = BigInt.makeUInt64(num)
+        val = BigInt.mul64small(val, 100)
+        val = BigInt.add64small(val, num4)
+        val = BigInt.mul64small(val, 10000)
+        val = BigInt.add64small(val, num5)
+        val = BigInt.mul64small(val, 1000)
+        val = BigInt.add64small(val, num3)
+        val = BigInt.mul64small(val, 1000000000)
+        if num2 >= 0 then
+            val = BigInt.add64small(val, num2)
+        else
+            val = BigInt.sub64small(val, -num2)
+        end if
+            
+        unsigned_mod = BigInt.mod64small(val, MOD)
+        if BigInt.isNeg64(val) then
+            abs_mod = (TWO64MOD - unsigned_mod + MOD) % MOD
+            modRaw = 0 - abs_mod
+        else
+            modRaw = unsigned_mod
+        end if
+        if modRaw < 0 then
+            finalResult = -modRaw
+        else
+            finalResult = modRaw
+        end if
+        return finalResult
+        end function
+    ZdsGenerator.genZdsMem = function(random)
+        mem = ""
+        while true
+            mem = "0x" + random.Next(2147483647).to_hex
+            if mem.len != 0 or self.listMems.indexOf(mem) == null then break
+        end while
+        return mem
+        end function
+    ZdsGenerator.generate = function
+        i = 0
+        p = "SEL LIB"
+		for each in self.libId
+            p = p + "\n[" + i + "] " + each
+            i = i + 1
+        end for
+        print(format_columns(p))
+        i = user_input("Select a library ID: ").to_int
+        if not i isa number then exit("Invalid selection!".color(__errC))
+        idLib = i
+        libVer = user_input("Enter lib version (format: 1.0.0): ").remove(".").remove(".").to_int
+        if not libVer isa number then exit(("Invalid version info!" + libVer).color(__errC))
+        worldSeed = user_input("Enter World Seed: ").to_int
+        if not worldSeed isa number then exit("World seed must be a number!".color(__errC))
+        date = DateTime.now
+        self.listMems = user_input("Enter list of all mems for this version\n(sep by commas, no spaces ex. 0x14,0x15): ").split(",").trim
+        zdsSeed = self.convertSeed(idLib, worldSeed, libVer, date.month, date.year)
+        print("ZDS Seed: " + zdsSeed)
+        random = new Random
+        random.init(zdsSeed)
+        print(("ZDS Memory Address: " + self.genZdsMem(random)).color(__retC))
+        end function
+print("\n<align=""center"">Celestial Tools" + char(169) + "</align>\n<align=""center""><size=30px>Zero Day System MemZone Tool</size></align>\n<align=""center"">" + __v + "</align>\n")
+ZdsGenerator.generate
