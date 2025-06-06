@@ -1,6 +1,6 @@
 //Neurobox debugtool application for greyhack
 // by MachaCeleste 20241029
-__v = "v1.0.3"
+__v = "v1.0.4"
 string.color = function(hexc)
     return "<color=" + hexc + ">" + self + "</color>"
 end function
@@ -116,7 +116,7 @@ Toolbox = {}
                 m.check.req = "load"
                 m.check.run = function(x)
                     if not self.package.Ml.is_patched then return print("This library is not yet patched!".color("red"))
-                    print("Library patched!".color("green") + "\n" + ("Date until patch expires: " + self.package.Ml.is_patched(true)).color("green"))
+                    print("Library patched!".color("green") + "\n" + ("Date until patch expires: " + self.package.Ml.is_patched(1)).color("green"))
                 end function
             m.exit = {}
                 m.exit.use = "Usage: exit"
